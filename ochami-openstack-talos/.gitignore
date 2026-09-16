@@ -1,0 +1,40 @@
+# Per-tutorial ignores. The repo-wide .gitignore covers *.log, kubeconfig and
+# **/tmp; this file covers what THIS lab generates.
+
+# ─── OpenStack credentials (§1) ──────────────────────────────────────────────
+clouds.yaml
+tw-env.sh
+!templates/clouds.yaml.example
+!templates/tw-env.sh
+*.openrc
+openrc*.sh
+
+# ─── Talos cluster secrets (§8) ──────────────────────────────────────────────
+# controlplane.yaml carries the cluster CA private key and bootstrap secrets;
+# talosconfig is an admin client certificate. Never commit either.
+controlplane.yaml
+worker.yaml
+talosconfig
+talosconfig-*
+secrets.yaml
+
+# ─── SSH keys for the lab (§4) ───────────────────────────────────────────────
+id_ed25519
+id_ed25519.pub
+id_rsa
+id_rsa.pub
+*.pem
+
+# ─── Downloaded boot artifacts (§7, §8) ──────────────────────────────────────
+# Large and reproducible — fetch them, don't store them.
+*.qcow2
+*.iso
+*.img
+vmlinuz*
+initramfs*
+ipxe.efi
+ipxe.usb
+
+# ─── Generated / captured state ──────────────────────────────────────────────
+run-log.txt
+recon-output/

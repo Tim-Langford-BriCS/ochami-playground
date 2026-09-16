@@ -1,0 +1,127 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PATH B — clouds.yaml (§1.4).
+#
+# This is Horizon's download from Project → API Access → Download clouds.yaml,
+# with three deliberate modifications:
+#
+#   1. The entry is renamed `openstack` → `techwatch`. Four things name that
+#      cloud — tw-vars-env.sh, sushy-emulator.conf, tofu/terraform.tfvars, and your
+#      shell's OS_CLOUD — so renaming here keeps all of them true. Changing
+#      OS_CLOUD instead means four edits and a broken IaC run when you forget one.
+#   2. `auth_type: v3password` stated explicitly. It is the default when
+#      `username` is present, but being explicit makes the contrast with the
+#      application-credential entry below legible.
+#   3. NO PASSWORD. Horizon's comment tells you to add one; don't. See below.
+#
+# Install as:
+#   devbox$ mkdir -p ~/.config/openstack
+#   devbox$ cp techwatch-proto-clouds.yaml ~/.config/openstack/clouds.yaml
+#   devbox$ chmod 600 ~/.config/openstack/clouds.yaml
+#   devbox$ export OS_CLOUD=techwatch
+#
+# ⚠ Do not use this at the same time as techwatch-proto-openrc.sh. openstacksdk
+#   merges OS_* environment variables on top of this file rather than choosing
+#   between them — the commonest cause of "impossible" auth errors (§1.4).
+#
+# ⚠ NEVER COMMIT A VERSION WITH A PASSWORD OR A CREDENTIAL SECRET IN IT.
+#   The tutorial's .gitignore excludes clouds.yaml and secure.yaml; the habit
+#   matters more than the file.
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# WHERE DOES THE PASSWORD COME FROM?
+#
+# Each `openstack` command authenticates to Keystone independently — it POSTs your
+# credentials to /v3/auth/tokens, gets a token plus the service catalogue back, and
+# uses them for that one command. There is no token cache on disk. So "where the
+# password comes from" is a question you have to answer for every invocation, and
+# there are four ways to do it:
+#
+#   1. Leave `password` out, as here → python-openstackclient PROMPTS.
+#      Correct and safe, but it prompts on EVERY command, because each one
+#      authenticates afresh. Fine for a handful of commands; miserable for §5.
+#
+#   2. secure.yaml → the mechanism openstacksdk provides for exactly this.
+#      Same structure as this file, merged on top of it, kept 0600:
+#
+#        devbox$ cat > ~/.config/openstack/secure.yaml << 'EOF'
+#        clouds:
+#          techwatch:
+#            auth:
+#              password: "your-password-here"
+#        EOF
+#        devbox$ chmod 600 ~/.config/openstack/secure.yaml
+#
+#      No prompts, and the secret is in one file you can delete. It is still your
+#      personal password in plaintext on disk — which is why option 4 exists.
+#
+#   3. export OS_PASSWORD once per shell — identical ergonomics to the openrc
+#      script, and nothing is written to disk:
+#
+#        devbox$ read -srp "OpenStack password: " OS_PASSWORD && export OS_PASSWORD
+#
+#      (This is the ONE OS_* variable it is reasonable to set alongside
+#      clouds.yaml, because it supplies a value the file deliberately omits rather
+#      than overriding one it sets.)
+#
+#   4. An application credential — no password anywhere. See the second entry
+#      below. This is where you should end up before §3.
+
+clouds:
+  # ── Path B, step 1: password auth (get unblocked, read-only work) ──────────
+  techwatch:
+    auth_type: v3password
+    auth:
+      auth_url: https://api.dl.acrc.bris.ac.uk:5000
+      username: "tlangford"          # ⚠ yours, not this
+      project_id: c12540ed6a8b4d9991db1e1adaa4068b
+      project_name: "techwatch-proto"
+      user_domain_name: "Default"
+      # password: deliberately absent — see the four options above.
+    region_name: "RegionOne"
+    interface: "public"
+    identity_api_version: 3
+
+  # ── Path B, step 2: the application credential (before §3) ────────────────
+  #
+  # Create it in Horizon (Identity → Application Credentials → Create) or with the
+  # CLI command in §1.2, then UNCOMMENT this, comment out the entry above, and
+  # rename this one to `techwatch` so OS_CLOUD keeps working unchanged.
+  #
+  # Why bother, when the entry above works? Because this identity is pinned to the
+  # `member` role at creation time. If your account is later granted admin — which
+  # is on the table for flavor management (§1.5) — password auth silently makes
+  # every command you type admin-capable, including everything the IaC runs. An
+  # application credential created with `--role member` cannot be widened by a
+  # later role grant. It also has an expiry date, and revoking it costs one command
+  # and affects nothing else.
+  #
+  # techwatch-appcred:
+  #   auth_type: v3applicationcredential
+  #   auth:
+  #     auth_url: https://api.dl.acrc.bris.ac.uk:5000
+  #     application_credential_id: <APP_CRED_ID>
+  #     application_credential_secret: <APP_CRED_SECRET>     # shown ONCE, at creation
+  #   region_name: "RegionOne"
+  #   interface: "public"
+  #   identity_api_version: 3
+  #
+  # Note what is absent: no username, no password, no project. The credential
+  # carries its own scope, so this entry cannot be pointed at another project by
+  # accident.
+
+  # ── Optional: a separate admin entry, if you are granted the role (§1.2) ──
+  #
+  # Keep admin OUT of the entry the tutorial and the IaC use. Select it explicitly
+  # with --os-cloud techwatch-admin for one deliberate action, then stop.
+  #
+  # techwatch-admin:
+  #   auth_type: v3password
+  #   auth:
+  #     auth_url: https://api.dl.acrc.bris.ac.uk:5000
+  #     username: "tlangford"
+  #     project_id: c12540ed6a8b4d9991db1e1adaa4068b
+  #     project_name: "techwatch-proto"
+  #     user_domain_name: "Default"
+  #   region_name: "RegionOne"
+  #   interface: "public"
+  #   identity_api_version: 3

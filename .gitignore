@@ -1,0 +1,17 @@
+# Repo-wide ignores. Each tutorial adds its own .gitignore for what THAT lab
+# generates — see ochami-openstack-talos/.gitignore, which names this file as
+# the one covering *.log, kubeconfig and **/tmp.
+
+# ─── Cluster credentials ─────────────────────────────────────────────────────
+# A kubeconfig is an admin client certificate, not a config file.
+kubeconfig
+kubeconfig-*
+*.kubeconfig
+
+# ─── Captured state ──────────────────────────────────────────────────────────
+# Logs are where pasted output ends up, and pasted output is where secrets hide.
+*.log
+**/tmp/
+
+# ─── Editor and OS droppings ─────────────────────────────────────────────────
+.DS_Store
